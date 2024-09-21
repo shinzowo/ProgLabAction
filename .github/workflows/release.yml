@@ -39,43 +39,38 @@ jobs:
           asset_path: ./helloworld-0.0.${{ github.run_number }}-Linux.deb
           asset_name: helloworld-0.0.${{ github.run_number }}-Linux.deb
           asset_content_type: application/vnd.debian.binary-package
-  build_windows:
-    name: Build on Windows
+  build-windows:
     runs-on: windows-latest
     permissions: write-all
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: true
-      - name: Install dependencies
+      - name: Install dependencies via vcpkg
         run: |
-          choco install cmake -y
-          choco install boost -y
-      - name: Configure CMake
-        run: cmake . -DPATCH_VERSION=${{ github.run_number }}
-      - name: Build the project
-        run: cmake --build .
-      - name: Run tests
-        run: cmake --build . --target test
-      - name: Package the build
-        run: cmake --build . --target package
+          git clone https://github.com/microsoft/vcpkg.git
+          ./vcpkg/bootstrap-vcpkg.bat
+          ./vcpkg/vcpkg install boost-test
+      - run: cmake . -DPATCH_VERSION=${{ github.run_number }} -D CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake -D CMAKE_CXX_COMPILER=g++
+      - run: cmake --build .
+      - run: cmake --build . --target package
       - name: Create Release
-        id: create_release_windows
+        id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.run_number }}
-          release_name: Release ${{ github.run_number }} (Windows)
+          tag_name: ${{ github.run_number }}-win
+          release_name: Release ${{ github.run_number }}-win
           draft: false
           prerelease: false
       - name: Upload Release Asset
-        id: upload_release_asset_windows
+        id: upload-release-asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release_windows.outputs.upload_url }}
-          asset_path: ./helloworld-0.0.${{ github.run_number }}-win64.zip
-          asset_name: helloworld-0.0.${{ github.run_number }}-win64.zip
-          asset_content_type: application/zip
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./helloworld-0.0.${{ github.run_number }}-win64.exe
+          asset_name: helloworld-0.0.${{ github.run_number }}-win64.exe
+          asset_content_type: application/vnd.microsoft.portable-executable
