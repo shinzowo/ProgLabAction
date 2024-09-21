@@ -47,6 +47,10 @@ jobs:
         with:
           submodules: true
       - name: Install dependencies via vcpkg
+        uses: actions/cache@v3
+        with:
+          path: .vcpkg/installed
+          key: ${{ runner.os }}-vcpkg-boost-${{ hashFiles('**/vcpkg.json')}}
         run: |
           git clone https://github.com/microsoft/vcpkg.git
           ./vcpkg/bootstrap-vcpkg.bat
@@ -54,8 +58,6 @@ jobs:
       - run: cmake . -DPATCH_VERSION=${{ github.run_number }} -D CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake -D CMAKE_CXX_COMPILER=g++
       - run: cmake --build .
       - run: cmake --build . --target package
-      - run: dir /s  # Проверяем содержимое директории после сборки
-        shell: cmd
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
